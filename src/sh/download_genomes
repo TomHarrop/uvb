@@ -141,23 +141,27 @@ cuffcompare -s "$genome_dir"/"$genome_file".fa -CG \
 	-o "$genome_dir"/"$annotation_file".cuffcomp \
 	"$genome_dir"/"$annotation_file".gff3
 
-# remove Chr9 rRNA 'genes' from rice GTF
+# remove Chr9 rRNA 'genes' from rice GTF, stash the GTF and remove cuffcomp
+# intermediates
 if [[ "$species" == "os" ]]; then
 	echo -e "[ "$(date)": Removing rRNA 'genes' from os GTF ]"
 	# output to .tmp file to stash processed GTF
 	sed '/LOC_Os09g01000/d' \
 		"$genome_dir"/"$annotation_file".cuffcomp.combined.gtf \
 		| sed '/LOC_Os09g00999/d' > "$genome_dir"/gtf_final.tmp
+	rm "$genome_dir"/*cuffcomp*
+	mv "$genome_dir"/gtf_final.tmp \
+		"$genome_dir"/"$annotation_file".cuffcomp.rRNAremoved.gtf
 else
 	# stash unprocessed GTF
 	mv "$genome_dir"/"$annotation_file".cuffcomp.combined.gtf \
 		"$genome_dir"/gtf_final.tmp
+	rm "$genome_dir"/*cuffcomp*
+	mv "$genome_dir"/gtf_final.tmp \
+		"$genome_dir"/"$annotation_file".cuffcomp.gtf
 fi
 
 # remove cuffcomp intermediates then unstash gtf
-rm $genome_dir/*cuffcomp*
-mv $genome_dir/gtf_final.tmp \
-	"$genome_dir"/"$annotation_file".cuffcomp.rRNAremoved.gtf
 
 # log metadata
 cat -t <<- _EOF_ > "$genome_dir"/METADATA.csv
