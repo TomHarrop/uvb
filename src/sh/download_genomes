@@ -28,14 +28,69 @@ while [ "$1" != "" ]; do
 	shift
 done
 
-cat <<- _EOF_
-Caught arguments from CLI:
-jgi_logon = $jgi_logon
-jgi_password = $jgi_password
-species = $species
-genome_url = $genome_url
-annotation_url = $annotation_url
-_EOF_
+
+# bash traceback code from https://docwhat.org/tracebacks-in-bash/
+_showed_traceback=f
+
+_exit_trap () {
+  local _ec="$?"
+  if [[ $_ec != 0 && "${_showed_traceback}" != t ]]; then
+    traceback 1
+  fi
+}
+
+_err_trap() {
+  local _ec="$?"
+  local _cmd="${BASH_COMMAND:-unknown}"
+  traceback 1
+  _showed_traceback=t
+  echo "The command ${_cmd} exited with exit code ${_ec}." 1>&2
+}
+
+traceback() {
+  # Hide the traceback() call.
+  local -i start=$(( ${1:-0} + 1 ))
+  local -i end=${#BASH_SOURCE[@]}
+  local -i i=0
+  local -i j=0
+
+  echo "Traceback (last called is first):" 1>&2
+  for ((i=${start}; i < ${end}; i++)); do
+    j=$(( $i - 1 ))
+    local function="${FUNCNAME[$i]}"
+    local file="${BASH_SOURCE[$i]}"
+    local line="${BASH_LINENO[$j]}"
+    echo "     ${function}() in ${file}:${line}" 1>&2
+  done
+}
+
+# traps
+trap _err_trap SIGHUP SIGINT SIGTERM
+trap _exit_trap EXIT
+trap _err_trap ERR
+
+# handle waiting
+FAIL=0
+fail_wait() {
+for job in $(jobs -p); do
+  wait $job || let "FAIL+=1"
+done
+if [[ ! "$FAIL" == 0 ]]; then
+  exit 1
+fi
+}
+
+# how many CPUs we got?
+if [[ $SLURM_JOB_CPUS_PER_NODE ]]; then
+  maxCpus="$SLURM_JOB_CPUS_PER_NODE"
+  echo -e "[ "$(date)": ${0} running with "$maxCpus" CPUs ]"
+else
+  maxCpus=1
+fi
+
+set -u
+
+# CODE STARTS HERE -------------------------------------------------------------
 
 # set up a phytozome cookie
 jgi_cookies=(/tmp/jgi_cookie.*)
@@ -66,7 +121,8 @@ cat <<- _EOF_
 	$genome_url
 _EOF_
 curl $genome_url -b "$jgi_cookie" -c "$jgi_cookie" > \
-	"$genome_dir"/"$genome_file".fa.gz
+	"$genome_dir"/"$genome_file".fa.gz \
+	&& gunzip "$genome_dir"/"$genome_file".fa.gz
 
 # download the annotation
 annotation_file="$(basename $annotation_url .gff3.gz)"
@@ -75,60 +131,41 @@ cat <<- _EOF_
 	$annotation_url
 _EOF_
 curl $annotation_url -b "$jgi_cookie" -c "$jgi_cookie" > \
-	"$genome_dir"/"$annotation_file".gff3.gz
+	"$genome_dir"/"$annotation_file".gff3.gz \
+	&& gunzip "$genome_dir"/"$annotation_file".gff3.gz
+
+# make cuffcomp gtf
+echo -e "[ "$(date)": Making GTF file with cuffcompare ]"
+cuffcompare -s "$genome_dir"/"$genome_file".fa -CG \
+	-r "$genome_dir"/"$annotation_file".gff3 \
+	-o "$genome_dir"/"$annotation_file".cuffcomp \
+	"$genome_dir"/"$annotation_file".gff3
+
+# remove Chr9 rRNA 'genes' from rice GTF
+if [[ "$species" == "os" ]]; then
+	echo -e "[ "$(date)": Removing rRNA 'genes' from os GTF ]"
+	# output to .tmp file to stash processed GTF
+	sed '/LOC_Os09g01000/d' \
+		"$genome_dir"/"$annotation_file".cuffcomp.combined.gtf \
+		| sed '/LOC_Os09g00999/d' > "$genome_dir"/gtf_final.tmp
+else
+	# stash unprocessed GTF
+	mv "$genome_dir"/"$annotation_file".cuffcomp.combined.gtf \
+		"$genome_dir"/gtf_final.tmp
+fi
+
+# remove cuffcomp intermediates then unstash gtf
+rm $genome_dir/*cuffcomp*
+mv $genome_dir/gtf_final.tmp \
+	"$genome_dir"/"$annotation_file".cuffcomp.rRNAremoved.gtf
+
+# log metadata
+cat -t <<- _EOF_ > "$genome_dir"/METADATA.csv
+	script,${0}
+	branch,$(git rev-parse --abbrev-ref HEAD)
+	hash,$(git rev-parse HEAD)
+	date,$(date +%F)
+	cuffcomp version,$(cuffcompare -h 2>&1 | head -n 1)
+_EOF_
 
 exit 0
-
-
-
-# # make sure the file was downloaded
-# if [[ ! -s "$genome_dir"/"$genome_file.fa.gz" ]]; then
-# 	echo -e "[ "$(date)": ERROR: download failed, check password? ]"
-# 	exit 1
-# fi
-
-# cat <<- _EOF_
-# 	[ $(date): Downloading annotation ]
-# 	$annot_url
-# _EOF_
-# curl $annot_url -b "$genome_dir"/cookies -c "$genome_dir"/cookies > $genome_dir/$annotation_file.gff3.gz
-
-# echo -e "[ "$(date)": Unzipping downloads ]"
-# gunzip $genome_dir/$genome_file.fa.gz
-# gunzip $genome_dir/$annotation_file.gff3.gz
-
-# rm "$genome_dir"/cookies
-
-# # make cuffcomp gtf
-# echo -e "[ "$(date)": Making GTF file with cuffcompare ]"
-# cuffcompare -s $genome_dir/$genome_file.fa -CG -r $genome_dir/$annotation_file.gff3 \
-# 	-o $genome_dir/$annotation_file.cuffcomp $genome_dir/$annotation_file.gff3
-
-# # remove Chr9 rRNA 'genes'
-# sed '/LOC_Os09g01000/d' $genome_dir/$annotation_file.cuffcomp.combined.gtf \
-# 	| sed '/LOC_Os09g00999/d' \
-# 	> $genome_dir/gtf_final.tmp
-
-# # remove cuffcomp intermediates
-# rm $genome_dir/*cuffcomp*
-# mv $genome_dir/gtf_final.tmp $genome_dir/$annotation_file.cuffcomp.rRNAremoved.gtf
-
-# # download MSU annotations file
-# annotationsUrl="ftp://ftp.plantbiology.msu.edu/pub/data/Eukaryotic_Projects/o_sativa/annotation_dbs/pseudomolecules/version_7.0/all.dir/all.locus_brief_info.7.0"
-# annotationsFile="$(basename $annotationsUrl).tab"
-# cat <<- _EOF_
-# 	[ $(date): Downloading MSU gene function annotations ]
-# 	$genome_url
-# _EOF_
-# curl $annotationsUrl > "$genome_dir"/"$annotationsFile"
-
-# # log metadata
-# cat -t <<- _EOF_ > $genome_dir/METADATA.csv
-# 	script,${0}
-# 	branch,$(git rev-parse --abbrev-ref HEAD)
-# 	hash,$(git rev-parse HEAD)
-# 	date,$(date +%F)
-# 	cuffcomp version,$(cuffcompare -h 2>&1 | head -n 1)
-# _EOF_
-
-# exit 0
