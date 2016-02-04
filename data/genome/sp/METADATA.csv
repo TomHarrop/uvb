@@ -1,0 +1,5 @@
+script,src/sh/download_genomes
+branch,master
+hash,1974a3e1e8efc87bce1992afdcff814c2fb70831
+date,2016-02-03
+cuffcomp version,cuffcompare v2.2.1 (4237)

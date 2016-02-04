@@ -161,8 +161,6 @@ else
 		"$genome_dir"/"$annotation_file".cuffcomp.gtf
 fi
 
-# remove cuffcomp intermediates then unstash gtf
-
 # log metadata
 cat -t <<- _EOF_ > "$genome_dir"/METADATA.csv
 	script,${0}
