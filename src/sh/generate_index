@@ -71,6 +71,7 @@ fi
 # set parameters
 genomeFastaFiles=(data/genome/"$species"/*.fa)
 sjdbGTFfile=(data/genome/"$species"/*.gtf)
+sjdbGTFtagExonParentGene="gene_name"
 sjdbOverhang=99
 outFileNamePrefix="$outdir/"
 
@@ -84,14 +85,17 @@ cat <<- _EOF_
 	              genomeFastaFiles: ${genomeFastaFiles[@]}
 	                   sjdbGTFfile: ${sjdbGTFfile[@]}
 	                  sjdbOverhang: $sjdbOverhang
+	      sjdbGTFtagExonParentGene: $sjdbGTFtagExonParentGene
 _EOF_
 
 FAIL=0
-cmd="STAR --runThreadN "$maxCpus" --runMode genomeGenerate --genomeDir $outdir \
+cmd="STAR --runThreadN "$maxCpus" --limitGenomeGenerateRAM "$ram_limit" \
+	--runMode genomeGenerate --genomeDir $outdir \
 	--genomeFastaFiles $genomeFastaFiles --sjdbGTFfile $sjdbGTFfile \
+	--sjdbGTFtagExonParentGene $sjdbGTFtagExonParentGene
 	--sjdbOverhang $sjdbOverhang --outFileNamePrefix $outFileNamePrefix"
 srun --output $outdir/stargg.out --exclusive --ntasks=1 \
-	--cpus-per-task="$maxCpus" $cmd &
+	--cpus-per-task="$maxCpus" --mem-per-cpu=3000 $cmd &
 
 echo -e "[ "$(date)": Waiting for jobs to finish ]"
 fail_wait
