@@ -1,0 +1,137 @@
+#!/bin/bash
+
+set -e
+
+# catch species
+while [ "$1" != "" ]; do
+  case $1 in
+    -s )  shift
+        species=$1
+        ;;
+    * )   echo "Bad input"
+        exit 1
+  esac
+  shift
+done
+
+
+# how many CPUs we got?
+if [[ $SLURM_JOB_CPUS_PER_NODE ]]; then
+  maxCpus="$SLURM_JOB_CPUS_PER_NODE"
+  echo -e "[ "$(date)": Running STAR with "$maxCpus" CPUs ]"
+else
+  maxCpus=1
+fi
+let "ram_limit = $maxCpus * 3000000000"
+echo -e "[ "$(date)": Allocating $(($ram_limit/1000000000)) GB RAM ]"
+
+# cleanup functions
+exit_error() {
+  echo -e "[ "$(date)": Script aborted ]"
+  exit 1
+}
+
+# catch exit codes
+trap_exit() {
+  exitCode=$?
+  if (( "exitCode" == 0 )) ; then
+    exit 0
+  else
+    exit_error
+  fi
+}
+
+# traps
+trap exit_error SIGHUP SIGINT SIGTERM
+trap trap_exit EXIT
+
+# handle waiting
+FAIL=0
+fail_wait() {
+for job in $(jobs -p); do
+  wait $job || let "FAIL+=1"
+done
+if [[ ! "$FAIL" == 0 ]]; then
+  exit 1
+fi
+}
+
+set -u
+
+# CODE STARTS HERE -------------------------------------------------------------
+
+echo -e "[ "$(date)": Mapping with STAR for "$species" ]"
+
+# make output directory
+outdir="output/"$species"/star"
+if [[ ! -d $outdir ]]; then
+  mkdir -p $outdir
+fi
+
+# stop if there is no STAR index
+star_index_dir="output/"$species"/star-index"
+if [[ ! -d "$star_index_dir" ]]; then
+  echo -e "[ "$(date)": No STAR index found ]"
+  exit 1
+fi
+echo -e "[ "$(date)": Using STAR index $star_index_dir ]"
+
+# stop if there is no cutadapt folder
+cutadapt_dir="output/"$species"/cutadapt"
+if [[ ! -d "$cutadapt_dir" ]]; then
+  echo -e "[ "$(date)": No cutadapt folder found ]"
+  exit 1
+fi
+echo -e "[ "$(date)": Using cutadapt folder $cutadapt_dir ]"
+
+# STAR options
+options="--runThreadN "$maxCpus" --limitBAMsortRAM "$ram_limit" \
+  --genomeDir "$star_index_dir" --genomeLoad LoadAndKeep \
+  --readFilesCommand zcat --outSAMtype BAM SortedByCoordinate \
+  --outBAMcompression 10 --outFilterIntronMotifs RemoveNoncanonical"
+
+echo -e "[ "$(date)": Running mapping jobs for "$species" ]"
+
+# find the read files and run STAR
+shopt -s nullglob
+read_files=("$cutadapt_dir"/*.fastq.gz)
+shopt -u nullglob
+for read_file in "${read_files[@]}"; do
+  lib_name=$(basename $read_file .fastq.gz)
+  cat -t <<- _EOF_
+    [ $(date): Submitting job ]
+      species: $species
+     lib_name: $lib_name
+    read_file: $read_file
+_EOF_
+  cmd="STAR $options --readFilesIn $read_file \
+    --outFileNamePrefix "$outdir"/"$lib_name"."
+  echo "srun --output "$outdir"/"$lib_name".out --exclusive --ntasks=1 \
+          --cpus-per-task="$maxCpus" --mem-per-cpu=3000 $cmd &"
+done
+
+echo -e "[ "$(date)": Waiting for mapping jobs to finish ]"
+FAIL=0
+fail_wait
+
+# unload the genome
+echo -e "[ "$(date)": Unloading genome from shared memory ]"
+cmd="STAR --runThreadN "$maxCpus" --genomeDir $star_index_dir \
+      --genomeLoad Remove --outFileNamePrefix /dev/null"
+echo "srun --output "$outdir"/unload.out --ntasks=1 --exclusive \
+  --cpus-per-task="$maxCpus" $cmd"
+
+# log metadata
+cat -t <<- _EOF_ > "$outdir"/METADATA.csv
+  Script,${0}
+  branch,$(git rev-parse --abbrev-ref HEAD)
+  hash,$(git rev-parse HEAD)
+  date,$(date +%F)
+  STAR version,$(STAR --version)
+  STAR index,$star_index_dir
+  cutadapt folder,$cutadapt_dir
+_EOF_
+
+echo -e "[ "$(date)": Jobs finished, exiting ]"
+
+exit 0

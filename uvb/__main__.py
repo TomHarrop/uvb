@@ -67,6 +67,18 @@ def cutadapt(input_reads, output_reads, species):
                                   extras=['-s', species])
     functions.print_job_submission(job_name, job_id)
 
+
+# run star mapping
+def star(input_files, output_files, species):
+    job_script = 'src/sh/star'
+    ntasks = '1'
+    cpus_per_task = '7'
+    job_name = species + '_star'
+    job_id = functions.submit_job(job_script, ntasks, cpus_per_task, job_name,
+                                  extras=['-s', species])
+    functions.print_job_submission(job_name, job_id)
+
+
 #########################
 # PIPELINE CONSTRUCTION #
 #########################
@@ -135,7 +147,13 @@ def main():
         output=r"output/\1/cutadapt/METADATA.csv",
         extras=[r"\1"])
 
-    # first mapping step. probably need a "combine" function?
+    # first mapping step
+    mapped_reads = main_pipeline.collate(
+        task_func=star,
+        input=[star_indices, trimmed_reads],
+        filter=ruffus.formatter(),
+        output="{subpath[0][1]}/star/METADATA.csv",
+        extras=["{subdir[0][1]}"])
 
     # run the pipeline
     ruffus.cmdline.run(options, multithread=8)
