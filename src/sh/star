@@ -106,8 +106,8 @@ for read_file in "${read_files[@]}"; do
 _EOF_
   cmd="STAR $options --readFilesIn $read_file \
     --outFileNamePrefix "$outdir"/"$lib_name"."
-  echo "srun --output "$outdir"/"$lib_name".out --exclusive --ntasks=1 \
-          --cpus-per-task="$maxCpus" --mem-per-cpu=3000 $cmd &"
+  srun --output "$outdir"/"$lib_name".out --exclusive --ntasks=1 \
+          --cpus-per-task="$maxCpus" --mem-per-cpu=3000 $cmd &
 done
 
 echo -e "[ "$(date)": Waiting for mapping jobs to finish ]"
@@ -118,8 +118,8 @@ fail_wait
 echo -e "[ "$(date)": Unloading genome from shared memory ]"
 cmd="STAR --runThreadN "$maxCpus" --genomeDir $star_index_dir \
       --genomeLoad Remove --outFileNamePrefix /dev/null"
-echo "srun --output "$outdir"/unload.out --ntasks=1 --exclusive \
-  --cpus-per-task="$maxCpus" $cmd"
+srun --output "$outdir"/unload.out --ntasks=1 --exclusive \
+  --cpus-per-task="$maxCpus" $cmd
 
 # log metadata
 cat -t <<- _EOF_ > "$outdir"/METADATA.csv
