@@ -88,7 +88,8 @@ echo -e "[ "$(date)": Using cutadapt folder $cutadapt_dir ]"
 options="--runThreadN "$maxCpus" --limitBAMsortRAM "$ram_limit" \
   --genomeDir "$star_index_dir" --genomeLoad LoadAndKeep \
   --readFilesCommand zcat --outSAMtype BAM SortedByCoordinate \
-  --outBAMcompression 10 --outFilterIntronMotifs RemoveNoncanonical"
+  --outBAMcompression 10 --outFilterIntronMotifs RemoveNoncanonical \
+  --quantMode GeneCounts"
 
 echo -e "[ "$(date)": Running mapping jobs for "$species" ]"
 
