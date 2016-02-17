@@ -134,12 +134,10 @@ curl $annotation_url -b "$jgi_cookie" -c "$jgi_cookie" > \
 	"$genome_dir"/"$annotation_file".gff3.gz \
 	&& gunzip "$genome_dir"/"$annotation_file".gff3.gz
 
-# make cuffcomp gtf
-echo -e "[ "$(date)": Making GTF file with cuffcompare ]"
-cuffcompare -s "$genome_dir"/"$genome_file".fa -CG \
-	-r "$genome_dir"/"$annotation_file".gff3 \
-	-o "$genome_dir"/"$annotation_file".cuffcomp \
-	"$genome_dir"/"$annotation_file".gff3
+# make gtf
+echo -e "[ "$(date)": Making GTF file with gffread ]"
+gffread -o "$genome_dir"/"$annotation_file".gffread.gtf \
+	-T "$genome_dir"/"$annotation_file".gff3
 
 # remove Chr9 rRNA 'genes' from rice GTF, stash the GTF and remove cuffcomp
 # intermediates
@@ -147,18 +145,11 @@ if [[ "$species" == "os" ]]; then
 	echo -e "[ "$(date)": Removing rRNA 'genes' from os GTF ]"
 	# output to .tmp file to stash processed GTF
 	sed '/LOC_Os09g01000/d' \
-		"$genome_dir"/"$annotation_file".cuffcomp.combined.gtf \
+		"$genome_dir"/"$annotation_file".gffread.gtf \
 		| sed '/LOC_Os09g00999/d' > "$genome_dir"/gtf_final.tmp
-	rm "$genome_dir"/*cuffcomp*
+	rm "$genome_dir"/*gffread*
 	mv "$genome_dir"/gtf_final.tmp \
-		"$genome_dir"/"$annotation_file".cuffcomp.rRNAremoved.gtf
-else
-	# stash unprocessed GTF
-	mv "$genome_dir"/"$annotation_file".cuffcomp.combined.gtf \
-		"$genome_dir"/gtf_final.tmp
-	rm "$genome_dir"/*cuffcomp*
-	mv "$genome_dir"/gtf_final.tmp \
-		"$genome_dir"/"$annotation_file".cuffcomp.gtf
+		"$genome_dir"/"$annotation_file".gffread.rRNAremoved.gtf
 fi
 
 # log metadata
@@ -167,7 +158,6 @@ cat -t <<- _EOF_ > "$genome_dir"/METADATA.csv
 	branch,$(git rev-parse --abbrev-ref HEAD)
 	hash,$(git rev-parse HEAD)
 	date,$(date +%F)
-	cuffcomp version,$(cuffcompare -h 2>&1 | head -n 1)
 _EOF_
 
 exit 0

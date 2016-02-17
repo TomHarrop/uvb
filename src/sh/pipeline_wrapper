@@ -14,7 +14,7 @@ while [ "$1" != "" ]; do
 	shift
 done
 
-set -eu
+set -e
 
 mail_output() {
 	subject="[Tom@SLURM] Pipeline started at $(date) finished"
@@ -64,7 +64,7 @@ trap _exit_trap EXIT
 trap _err_trap ERR
 
 # start code
-if [[ "$jgi_logon" && "$jgi_password" ]]; then
+if [[ $jgi_logon && $jgi_password ]]; then
 	python3 uvb -e "$jgi_logon" -p "$jgi_password" -v5 \
 		&> ruffus/pipeline.log.txt
 else

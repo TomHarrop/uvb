@@ -18,10 +18,12 @@ done
 # how many CPUs we got?
 if [[ $SLURM_JOB_CPUS_PER_NODE ]]; then
 	maxCpus="$SLURM_JOB_CPUS_PER_NODE"
-	echo -e "[ "$(date)": Running with "$maxCpus" CPUs ]"
+	echo -e "[ "$(date)": Running STAR with "$maxCpus" CPUs ]"
 else
 	maxCpus=1
 fi
+let "ram_limit = $maxCpus * 3000000000"
+echo -e "[ "$(date)": Allocating $(($ram_limit/1000000000)) GB RAM ]"
 
 # cleanup functions
 exit_error() {
@@ -69,9 +71,7 @@ fi
 # set parameters
 genomeFastaFiles=(data/genome/"$species"/*.fa)
 sjdbGTFfile=(data/genome/"$species"/*.gtf)
-sjdbGTFtagExonParentTranscript="oId"
-sjdbGTFtagExonParentGene="gene_name"
-sjdbOverhang=109 # check
+sjdbOverhang=99
 outFileNamePrefix="$outdir/"
 
 if [[ ! ${#genomeFastaFiles[@]} -eq 1 || ! ${#sjdbGTFfile[@]} -eq 1 ]]; then
@@ -83,15 +83,12 @@ cat <<- _EOF_
 	[ $(date): Submitting job ]
 	              genomeFastaFiles: ${genomeFastaFiles[@]}
 	                   sjdbGTFfile: ${sjdbGTFfile[@]}
-	sjdbGTFtagExonParentTranscript: $sjdbGTFtagExonParentTranscript
 	                  sjdbOverhang: $sjdbOverhang
 _EOF_
 
 FAIL=0
 cmd="STAR --runThreadN "$maxCpus" --runMode genomeGenerate --genomeDir $outdir \
 	--genomeFastaFiles $genomeFastaFiles --sjdbGTFfile $sjdbGTFfile \
-	--sjdbGTFtagExonParentTranscript $sjdbGTFtagExonParentTranscript \
-	--sjdbGTFtagExonParentGene $sjdbGTFtagExonParentGene \
 	--sjdbOverhang $sjdbOverhang --outFileNamePrefix $outFileNamePrefix"
 srun --output $outdir/stargg.out --exclusive --ntasks=1 \
 	--cpus-per-task="$maxCpus" $cmd &

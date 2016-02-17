@@ -35,7 +35,7 @@ def download_genome(output_files, species, genome_url, annotation_url,
 def generate_index(input_files, output_files, species):
     job_script = 'src/sh/generate_index'
     ntasks = '1'
-    cpus_per_task = '1'
+    cpus_per_task = '7'
     job_name = species + "_index"
     job_id = functions.submit_job(job_script, ntasks, cpus_per_task, job_name,
                                   extras=['-s', species])
