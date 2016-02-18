@@ -89,7 +89,7 @@ options="--runThreadN "$maxCpus" --limitBAMsortRAM "$ram_limit" \
   --genomeDir "$star_index_dir" --genomeLoad LoadAndKeep \
   --readFilesCommand zcat --outSAMtype BAM SortedByCoordinate \
   --outBAMcompression 10 --outFilterIntronMotifs RemoveNoncanonical \
-  --quantMode GeneCounts"
+  --quantMode GeneCounts --clip3pAdapterSeq AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC"
 
 echo -e "[ "$(date)": Running mapping jobs for "$species" ]"
 
