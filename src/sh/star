@@ -106,7 +106,7 @@ for read_file in "${read_files[@]}"; do
     read_file: $read_file
 _EOF_
   cmd="STAR $options --readFilesIn $read_file \
-    --outFileNamePrefix "$outdir"/"$lib_name"."
+    --outFileNamePrefix "$outdir"/uv"$lib_name"."
   srun --output "$outdir"/"$lib_name".out --exclusive --ntasks=1 \
           --cpus-per-task="$maxCpus" --mem-per-cpu=3000 $cmd &
 done
