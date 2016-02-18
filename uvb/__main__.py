@@ -79,6 +79,10 @@ def star(input_files, output_files, species):
     functions.print_job_submission(job_name, job_id)
 
 
+# run deseq2
+# def deseq(input_files, output_files):
+#    pass
+
 #########################
 # PIPELINE CONSTRUCTION #
 #########################
@@ -138,22 +142,25 @@ def main():
                                 output="ruffus/" + species + "_reads",
                                 extras=[species])
 
-    # run cutadapt
-    trimmed_reads = main_pipeline.transform(
-        task_func=cutadapt,
-        input=ruffus.output_from(list(species + "_reads" for species in
-                                      fasta_urls.keys())),
-        filter=ruffus.regex(r"ruffus/(.*)_reads"),
-        output=r"output/\1/cutadapt/METADATA.csv",
-        extras=[r"\1"])
-
     # first mapping step
-    mapped_reads = main_pipeline.collate(
-        task_func=star,
-        input=[star_indices, trimmed_reads],
-        filter=ruffus.formatter(),
-        output="{subpath[0][1]}/star/METADATA.csv",
-        extras=["{subdir[0][1]}"])
+    for species in fasta_urls.keys():
+        main_pipeline.collate(
+            name=species + "_mapped_reads",
+            task_func=star,
+            input=[[ruffus.output_from(species + "_reads"),
+                    "output/" + species + "/star-index/METADATA.csv"]],
+            filter=ruffus.formatter(),
+            output=["output/{subdir[1][1]}/star/METADATA.csv"],
+            extras=["{subdir[1][1]}"])\
+            .follows(star_indices)
+
+    # downstream somethingorother
+#    deseq_results = main_pipeline.transform(
+#                task_func=deseq,
+#                input=ruffus.output_from(list(species + "_mapped_reads" for species in fasta_urls.keys())),
+#                filter=ruffus.regex(r"output/(\w+)/star/METADATA.csv"),
+#                output=[r"output/\1/deseq/METADATA.csv"],
+#                extras=[r"\1"])
 
     # run the pipeline
     ruffus.cmdline.run(options, multithread=8)

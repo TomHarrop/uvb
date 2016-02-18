@@ -1,8 +1,0 @@
-Script,src/sh/generate_index
-branch,master
-hash,4f5fe119477fc67216446badd498ca3958745240
-date,2016-02-17
-STAR version,STAR_2.5.1b
-genomeFastaFiles,data/genome/sl/Slycopersicum_225_iTAGv2.40.fa
-sjdbGTFfile,data/genome/sl/Slycopersicum_225_iTAGv2.3.gene_exons.gffread.gtf
-sjdbOverhang,99
