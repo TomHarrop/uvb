@@ -76,13 +76,13 @@ if [[ ! -d "$star_index_dir" ]]; then
 fi
 echo -e "[ "$(date)": Using STAR index $star_index_dir ]"
 
-# stop if there is no cutadapt folder
-cutadapt_dir="output/"$species"/cutadapt"
-if [[ ! -d "$cutadapt_dir" ]]; then
-  echo -e "[ "$(date)": No cutadapt folder found ]"
+# stop if there is no reads folder
+reads_dir="data/reads/"$species""
+if [[ ! -d "$reads_dir" ]]; then
+  echo -e "[ "$(date)": No reads folder found ]"
   exit 1
 fi
-echo -e "[ "$(date)": Using cutadapt folder $cutadapt_dir ]"
+echo -e "[ "$(date)": Using reads folder $reads_dir ]"
 
 # STAR options
 options="--runThreadN "$maxCpus" --limitBAMsortRAM "$ram_limit" \
@@ -95,7 +95,7 @@ echo -e "[ "$(date)": Running mapping jobs for "$species" ]"
 
 # find the read files and run STAR
 shopt -s nullglob
-read_files=("$cutadapt_dir"/*.fastq.gz)
+read_files=("$reads_dir"/*.fastq.gz)
 shopt -u nullglob
 for read_file in "${read_files[@]}"; do
   lib_name=$(basename $read_file .fastq.gz)
