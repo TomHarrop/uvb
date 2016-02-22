@@ -118,19 +118,19 @@ fail_wait
 # unload the genome
 echo -e "[ "$(date)": Unloading genome from shared memory ]"
 cmd="STAR --runThreadN "$maxCpus" --genomeDir $star_index_dir \
-      --genomeLoad Remove --outFileNamePrefix /dev/null"
+      --genomeLoad Remove --outFileNamePrefix "$outdir"/unload.out"
 srun --output "$outdir"/unload.out --ntasks=1 --exclusive \
   --cpus-per-task="$maxCpus" $cmd
 
 # log metadata
-cat -t <<- _EOF_ > "$outdir"/METADATA.csv
+cat -t << _EOF_ > "$outdir"/METADATA.csv
   Script,${0}
   branch,$(git rev-parse --abbrev-ref HEAD)
   hash,$(git rev-parse HEAD)
   date,$(date +%F)
   STAR version,$(STAR --version)
   STAR index,$star_index_dir
-  cutadapt folder,$cutadapt_dir
+  Reads folder,$reads_dir
 _EOF_
 
 echo -e "[ "$(date)": Jobs finished, exiting ]"
