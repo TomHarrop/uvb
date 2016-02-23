@@ -80,8 +80,24 @@ def star(input_files, output_files, species):
 
 
 # run deseq2
-# def deseq(input_files, output_files):
-#    pass
+def deseq2_R(input_files, output_files, species):
+    job_script = 'src/R/deseq2.R'
+    ntasks = '1'
+    cpus_per_task = '1'
+    job_name = species + '_deseq'
+    job_id = functions.submit_job(job_script, ntasks, cpus_per_task, job_name,
+                                  extras=['-s', species])
+    functions.print_job_submission(job_name, job_id)
+
+
+# parse mapping stats
+def parse_star_stats_R(input_files, output_files):
+    job_script = 'src/R/parse_star_stats.R'
+    ntasks = '1'
+    cpus_per_task = '1'
+    job_name = 'parse_stats'
+    job_id = functions.submit_job(job_script, ntasks, cpus_per_task, job_name)
+    functions.print_job_submission(job_name, job_id)
 
 #########################
 # PIPELINE CONSTRUCTION #
@@ -117,50 +133,55 @@ def main():
             fasta_urls[row[0]] = row[1]
             annotation_urls[row[0]] = row[2]
 
-    # iterate over fasta_urls keys to call download script
+    # iterate over fasta_urls keys to run jobs
     for species in fasta_urls.keys():
+        # call download script
         main_pipeline.originate(
             name=species + "_genome",
             task_func=download_genome,
             output="data/genome/" + species + "/METADATA.csv",
             extras=[species, fasta_urls[species], annotation_urls[species],
                     jgi_logon, jgi_password])
-
-    # generate a star genome for each species
-    star_indices = main_pipeline.transform(
-        task_func=generate_index,
-        input=ruffus.output_from(list(species + "_genome" for species in
-                                      fasta_urls.keys())),
-        filter=ruffus.regex(r"data/genome/(.*)/METADATA.csv"),
-        output=r"output/\1/star-index/METADATA.csv",
-        extras=[r"\1"])
-
-    # define the reads
-    for species in fasta_urls.keys():
+        # generate a star genome for each species
+        main_pipeline.transform(
+            name=species + "_index",
+            task_func=generate_index,
+            input=ruffus.output_from(species + "_genome"),
+            filter=ruffus.regex(r"data/genome/(.*)/METADATA.csv"),
+            output=r"output/\1/star-index/METADATA.csv",
+            extras=[r"\1"])
+        # define the reads
         main_pipeline.originate(name=species + "_reads",
                                 task_func=define_reads,
                                 output="ruffus/" + species + "_reads",
                                 extras=[species])
-
-    # first mapping step
-    for species in fasta_urls.keys():
+        # first mapping step
         main_pipeline.collate(
             name=species + "_mapped_reads",
             task_func=star,
             input=[[ruffus.output_from(species + "_reads"),
-                    "output/" + species + "/star-index/METADATA.csv"]],
+                    ruffus.output_from(species + "_index")]],
             filter=ruffus.formatter(),
             output=["output/{subdir[1][1]}/star/METADATA.csv"],
-            extras=["{subdir[1][1]}"])\
-            .follows(star_indices)
+            extras=["{subdir[1][1]}"])
+    # FOR LOOP ENDS
 
-    # downstream somethingorother
-#    deseq_results = main_pipeline.transform(
-#                task_func=deseq,
-#                input=ruffus.output_from(list(species + "_mapped_reads" for species in fasta_urls.keys())),
-#                filter=ruffus.regex(r"output/(\w+)/star/METADATA.csv"),
-#                output=[r"output/\1/deseq/METADATA.csv"],
-#                extras=[r"\1"])
+    # parse the mapping stats
+    mapping_stats = main_pipeline.merge(
+        task_func=parse_star_stats_R,
+        input=ruffus.output_from(
+            list(species + "_mapped_reads" for species in fasta_urls.keys())),
+        output="output/mapping_stats/SessionInfo.txt")
+
+    # use generator in the input field to collate the previous results
+    deseq_results = main_pipeline.transform(
+                task_func=deseq2_R,
+                input=ruffus.output_from(
+                        list(species + "_mapped_reads"
+                             for species in fasta_urls.keys())),
+                filter=ruffus.formatter(),
+                output=[r"output/{subdir[0][1]}/deseq/SessionInfo.txt"],
+                extras=[r"{subdir[0][1]}"])
 
     # run the pipeline
     ruffus.cmdline.run(options, multithread=8)
