@@ -11,7 +11,7 @@ import datetime
 ############################
 
 
-def submit_job(job_script, ntasks, cpus_per_task, job_name, extras=""):
+def submit_job(job_script, ntasks, cpus_per_task, job_name, extras=[]):
     # type: (str, str, str, str, str, list) -> str
     '''
     Submit the job using salloc hack. When complete return job id and write

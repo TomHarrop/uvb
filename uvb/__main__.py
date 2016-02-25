@@ -99,6 +99,17 @@ def parse_star_stats_R(input_files, output_files):
     job_id = functions.submit_job(job_script, ntasks, cpus_per_task, job_name)
     functions.print_job_submission(job_name, job_id)
 
+
+# plot mapping diagnostics
+def plot_reads_in_genes_R(input_files, output_files):
+    job_script = 'src/R/plot_reads_in_genes.R'
+    ntasks = '1'
+    cpus_per_task = '1'
+    job_name = 'parse_stats'
+    job_id = functions.submit_job(job_script, ntasks, cpus_per_task, job_name)
+    functions.print_job_submission(job_name, job_id)
+
+
 #########################
 # PIPELINE CONSTRUCTION #
 #########################
@@ -173,6 +184,13 @@ def main():
             list(species + "_mapped_reads" for species in fasta_urls.keys())),
         output="output/mapping_stats/SessionInfo.txt")
 
+    # generate plots for mapping
+    mapping_plots = main_pipeline.transform(
+        task_func=plot_reads_in_genes_R,
+        input=mapping_stats,
+        filter=ruffus.formatter(),
+        output="{subpath[0][0]}/readsInGenes.pdf")
+
     # use generator in the input field to collate the previous results
     deseq_results = main_pipeline.transform(
                 task_func=deseq2_R,
@@ -180,7 +198,7 @@ def main():
                         list(species + "_mapped_reads"
                              for species in fasta_urls.keys())),
                 filter=ruffus.formatter(),
-                output=[r"output/{subdir[0][1]}/deseq/SessionInfo.txt"],
+                output=[r"output/{subdir[0][1]}/deseq2/SessionInfo.txt"],
                 extras=[r"{subdir[0][1]}"])
 
     # run the pipeline
