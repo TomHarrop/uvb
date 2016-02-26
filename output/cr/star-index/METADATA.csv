@@ -1,0 +1,8 @@
+Script,src/sh/generate_index
+branch,master
+hash,00e221c86d23bb26c17d5af992b6582c6b60212c
+date,2016-02-19
+STAR version,STAR_2.5.1b
+genomeFastaFiles,data/genome/cr/Creinhardtii_281_v5.0.fa
+sjdbGTFfile,data/genome/cr/Creinhardtii_281_v5.5.gene_exons.gffread.gtf
+sjdbOverhang,99

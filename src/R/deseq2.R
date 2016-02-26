@@ -46,8 +46,9 @@ meta.data <- data.frame(meta.data.table, row.names = "rn")
 meta.data$uvb <- factor(meta.data$uvb, levels = c("none", "bs", "hw"))
 
 # set up DESeq2 object
-dds <- DESeq2::DESeqDataSetFromMatrix(countData = count.data,
-                                      colData = meta.data, design = ~ uvb)  
+dds <- DESeq2::DESeqDataSetFromMatrix(
+  countData = count.data[!grepl("^N_", rownames(count.data)), ],
+  colData = meta.data, design = ~ uvb)  
 dds <- DESeq2::DESeq(dds)
 
 ######

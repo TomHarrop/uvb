@@ -1,0 +1,8 @@
+Script,src/sh/generate_index
+branch,master
+hash,25dc00ce16ac392f2f84b89d330370d88b1f14c3
+date,2016-02-23
+STAR version,STAR_2.5.1b_modified
+genomeFastaFiles,data/genome/sp/Spolyrhiza_290_v1.fa
+sjdbGTFfile,data/genome/sp/Spolyrhiza_290_v2.gene_exons.gffread.gtf
+sjdbOverhang,99
