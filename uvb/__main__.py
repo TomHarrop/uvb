@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 #################
@@ -110,6 +110,16 @@ def plot_reads_in_genes_R(input_files, output_files):
     functions.print_job_submission(job_name, job_id)
 
 
+# combine the DESeq2 results into a single csv
+def list_de_genes_R(input_files, output_files):
+    job_script = 'src/R/list_de_genes.R'
+    ntasks = '1'
+    cpus_per_task = '1'
+    job_name = 'de_genes'
+    job_id = functions.submit_job(job_script, ntasks, cpus_per_task, job_name)
+    functions.print_job_submission(job_name, job_id)
+
+
 #########################
 # PIPELINE CONSTRUCTION #
 #########################
@@ -200,6 +210,12 @@ def main():
                 filter=ruffus.formatter(),
                 output=[r"output/{subdir[0][1]}/deseq2/SessionInfo.txt"],
                 extras=[r"{subdir[0][1]}"])
+
+    # combine the deseq results
+    de_lists = main_pipeline.merge(
+        task_func=list_de_genes_R,
+        input=deseq_results,
+        output="csv/SessionInfo.de_genes.txt")
 
     # run the pipeline
     ruffus.cmdline.run(options, multithread=8)
