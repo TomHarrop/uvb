@@ -16,27 +16,22 @@ with open(gene_name_list, 'r') as f:
     gene_names = [line.strip() for line in f]
 
 # run the Phytomine query
+views = ['name', 'primaryIdentifier', 'secondaryIdentifier',
+         'organism.shortName', 'briefDescription']
 service = Service('https://phytozome.jgi.doe.gov/phytomine/service')
 query = service.new_query('Gene')
-query.add_view('name', 'primaryIdentifier', 'secondaryIdentifier',
-               'organism.shortName', 'briefDescription')
+query.add_views(views)
 query.add_constraint('Gene.name', 'ONE OF', gene_names)
 
-# print the results into a tempfile
+# print the results into a tempfile as tsv
 tmp = tempfile.mkstemp(suffix=".txt", text=True)[1]
 sep = '\t'
-
 with open(tmp, 'w') as outfile:
-    outfile.write('name\tprimaryIdentifier\tsecondaryIdentifier\t'
-                  'organism.shortName\tbriefDescription\n')
+    # write header
+    outfile.write(sep.join(views) + '\n')
     for row in query.rows():
-        line = (str(row['name']) + sep +
-                str(row['primaryIdentifier']) + sep +
-                str(row['secondaryIdentifier']) + sep +
-                str(row['organism.shortName']) + sep +
-                str(row['briefDescription']) + '\n')
-        outfile.write(line)
+        # write a line from row with the result for each view
+        outfile.write(sep.join(list(str(row[x]) for x in views)) + '\n')
 
 # return filename for R to catch
 print(tmp)
-
