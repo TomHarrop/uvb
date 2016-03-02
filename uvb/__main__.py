@@ -215,7 +215,7 @@ def main():
     de_lists = main_pipeline.merge(
         task_func=list_de_genes_R,
         input=deseq_results,
-        output="csv/SessionInfo.de_genes.txt")
+        output="output/merged/deseq2/SessionInfo.de_genes.txt")
 
     # run the pipeline
     ruffus.cmdline.run(options, multithread=8)

@@ -16,13 +16,17 @@ gene_name_list = args.gene_name_list
 with open(gene_name_list, 'r') as f:
     gene_names = [line.strip() for line in f]
 
-# run the Phytomine query
-views = ['name', 'primaryIdentifier', 'secondaryIdentifier',
-         'organism.shortName', 'briefDescription']
+# set up phytomine query
 service = Service('https://phytozome.jgi.doe.gov/phytomine/service')
+views = ['primaryIdentifier', 'homolog.gene2.primaryIdentifier',
+         'homolog.gene2.organism.shortName', 'homolog.relationship']
 query = service.new_query('Gene')
 query.add_views(views)
 query.add_constraint('Gene.name', 'ONE OF', gene_names)
+query.add_constraint('homolog.gene2.organism.id', 'ONE OF',
+                     ['171000000', '256000000', '276000000', '328000000',
+                      '204000000', '241000000'], code='B')
+query.set_logic('A and B')
 
 # print the results into a tempfile as tsv
 tmp = tempfile.mkstemp(suffix=".txt", text=True)[1]

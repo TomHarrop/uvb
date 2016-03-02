@@ -31,12 +31,12 @@ LoadDeseqResults <- function(pattern) {
   rbindlist(results.tables, idcol = "Species")
 }
 # combine
-message(GenerateMessageText("Extracting significant genes"))
 results.lists <- lapply(list(bs = "bs.Rds", hw = "hw.Rds"), LoadDeseqResults)
 deseq.results <- rbindlist(results.lists, idcol = "UV")
 setkey(deseq.results, "rn")
 
 # extract "significant" genes
+message(GenerateMessageText("Extracting significant genes"))
 p.cutoff <- 0.1
 sig.genes <- deseq.results[padj <= p.cutoff, unique(rn)]
 sig.results <- deseq.results[sig.genes]
@@ -67,14 +67,16 @@ setkey(merged.results, "Species", "rn", "UV")
 
 # write merged.results to tsv
 message(GenerateMessageText("Saving output"))
-out.dir <- "csv"
+out.dir <- "output/merged/deseq2"
 if (!dir.exists(out.dir)) {
-  dir.create(out.dir)
+  dir.create(out.dir, recursive = TRUE)
 }
 out.file <- paste0(out.dir, "/de_genes.tsv")
-
 write.table(merged.results, file = out.file, quote = FALSE, row.names = FALSE,
             sep = "\t", na = "")
+
+# save deseq results RDS
+saveRDS(deseq.results, paste0(out.dir, "/deseq_results.Rds"))
 
 # save logs
 sInf <- c(paste("git branch:",system("git rev-parse --abbrev-ref HEAD",
