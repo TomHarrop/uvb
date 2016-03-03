@@ -91,7 +91,7 @@ cmd="STAR --runThreadN "$maxCpus" --limitGenomeGenerateRAM "$ram_limit" \
 	--runMode genomeGenerate --genomeDir $outdir \
 	--genomeFastaFiles $genomeFastaFiles --sjdbGTFfile $sjdbGTFfile \
 	--sjdbOverhang $sjdbOverhang --outFileNamePrefix $outFileNamePrefix"
-srun --output $outdir/stargg.out --exclusive --ntasks=1 \
+srun --output "$outdir"/stargg.out --exclusive --ntasks=1 \
 	--cpus-per-task="$maxCpus" --mem-per-cpu=3000 $cmd &
 
 echo -e "[ "$(date)": Waiting for jobs to finish ]"

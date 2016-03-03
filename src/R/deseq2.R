@@ -26,6 +26,7 @@ count.data.raw <- lapply(count.data.files, read.table, stringsAsFactors = FALSE)
 names(count.data.raw) <- gsub(".ReadsPerGene.out.tab", "",
                               basename(count.data.files), fixed = TRUE)
 
+# get the unstranded counts column
 extractUnstrandedCounts <- function(x){
   x <- copy(x)
   data.frame(row.names = x$V1, x$V2)
@@ -33,6 +34,42 @@ extractUnstrandedCounts <- function(x){
 unstranded.count.data <- lapply(count.data.raw, extractUnstrandedCounts)
 count.data <- do.call(cbind, unstranded.count.data)
 names(count.data) <- names(unstranded.count.data)
+
+# tidy up gene names
+TrimGeneId <- function(x, species = species) {
+  if (species %in% c("at", "sp")) {
+    gsub("([^\\.]+).*", "\\1", x)
+  } else if (species %in% c("cr", "sl")) {
+    gsub("([^\\.]+\\.[^\\.]+).*", "\\1", x)
+  } else if (species == "os") {
+    gsub("(.*)\\.MSU.*", "\\1", x)
+  } else if (species == "sm") {
+    gsub("^g", "", x)
+  } else if (species == "pp") {
+    x
+  } else {
+    stop("Species not matched in TrimGeneId")
+  }
+}
+# at: AT1G01010.TAIR10
+# TrimGeneId("AT1G01010.TAIR10", "at")
+# cr: Cre01.g000017.v5.5
+# TrimGeneId("Cre01.g000017.v5.5", "cr")
+# os: LOC_Os01g01010.MSUv7.0
+# TrimGeneId("LOC_Os01g01010.MSUv7.0", "os")
+# TrimGeneId("ChrSy.fgenesh.gene.5.MSUv7.0", "os")
+# TrimGeneId("ChrUn.fgenesh.gene.90.MSUv7.0", "os")
+# pp: Pp3c1_20
+# TrimGeneId("Pp3c1_20", "pp")
+# sl: Solyc00g005000.2.iTAGv2.3
+# TrimGeneId("Solyc00g005000.2.iTAGv2.3", "sl")
+# sm: g401996
+# TrimGeneId("g401996", "sm")
+# sp: Spipo0G0000100.v2
+# TrimGeneId("Spipo0G0000100.v2", "sp")
+
+rownames(count.data) <- sapply(rownames(count.data), TrimGeneId,
+                               species = species)
 
 # set up colData
 meta.data.table <- data.table(rn = colnames(count.data))

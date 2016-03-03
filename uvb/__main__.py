@@ -57,17 +57,6 @@ def define_reads(output_files, species):
     functions.touch(output_files)
 
 
-# run cutadapt
-def cutadapt(input_reads, output_reads, species):
-    job_script = 'src/sh/cutadapt'
-    ntasks = '4'
-    cpus_per_task = '1'
-    job_name = species + '_cutadapt'
-    job_id = functions.submit_job(job_script, ntasks, cpus_per_task, job_name,
-                                  extras=['-s', species])
-    functions.print_job_submission(job_name, job_id)
-
-
 # run star mapping
 def star(input_files, output_files, species):
     job_script = 'src/sh/star'
@@ -105,7 +94,7 @@ def plot_reads_in_genes_R(input_files, output_files):
     job_script = 'src/R/plot_reads_in_genes.R'
     ntasks = '1'
     cpus_per_task = '1'
-    job_name = 'parse_stats'
+    job_name = 'plot_reads_in_genes'
     job_id = functions.submit_job(job_script, ntasks, cpus_per_task, job_name)
     functions.print_job_submission(job_name, job_id)
 
