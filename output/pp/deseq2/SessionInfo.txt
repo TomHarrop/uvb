@@ -1,5 +1,5 @@
 git branch: master
-git hash: 410645d5065dac414f01585134729aa013e852d2
+git hash: 58b2c7c3d22f021637614fa26d039999ad37f901
 R version 3.2.3 (2015-12-10)
 Platform: x86_64-pc-linux-gnu (64-bit)
 Running under: Ubuntu 15.10
