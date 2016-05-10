@@ -1,5 +1,6 @@
 library(data.table)
 library(ggplot2)
+library(gtable)
 
 # messages
 GenerateMessage <- function(message.text){
@@ -43,6 +44,10 @@ for (i in shifted.rows) {
 }
 rm(j)
 
+# deal with PAL1/PAL2 (these genes have the same homologs)
+raw.data[Gene.designation %in% c("PAL1", "PAL2"),
+         Gene.designation := "PAL1/PAL2"]
+
 # set blank cells to NA
 for (j in names(raw.data)) {
   set(raw.data, which(raw.data[[j]] == ""), j, NA)
@@ -59,6 +64,10 @@ raw.data[grep("^Anthocyanin.*transferase", Protein.function),
 raw.data[Gene.designation %in% c("GSTF12", "TT12", "AHA10"),
          pathway := "Translocation"]
 raw.data[is.na(pathway), pathway := "Synthesis"]
+
+# set gene order
+raw.data[,Gene.designation := factor(
+  Gene.designation, levels = unique(Gene.designation))]
 
 saito.t1 <- copy(raw.data)
 setkey(saito.t1, "Locus")
@@ -109,6 +118,17 @@ flavonol.homologs <- rbind(flavonol.homologs,
                              homolog.relationship = "identical"
                            )]))
 
+# set order of species
+flavonol.homologs[, homolog.species := factor(
+  homolog.species, levels = c("At", "Sl" ,"Os", "Sp", "Sm", "Pp", "Cr"))]
+
+# order genes by species
+flavonol.homologs[, s.order := as.numeric(homolog.species)]
+setkey(flavonol.homologs, "s.order", "homolog.id")
+flavonol.homologs[, homolog.id := factor(
+  homolog.id, levels = unique(homolog.id))]
+flavonol.homologs[, s.order := NULL]
+
 # remove rows where no homologs were found
 flavonol.homologs <- flavonol.homologs[!is.na(homolog.id)]
 setkey(flavonol.homologs, "homolog.id")
@@ -119,10 +139,18 @@ flavonol.expression <- deseq.results[flavonol.homologs, .(
   At.id, At.function, At.designation, Pathway, Saito.ref, homolog.species,
   homolog.id, homolog.relationship, UV, log2FoldChange, lfcSE
 )]
+
+# order genes by species
+flavonol.expression[, s.order := as.numeric(homolog.species)]
+setkey(flavonol.expression, "s.order", "homolog.id")
+flavonol.expression[, homolog.id := factor(
+  homolog.id, levels = rev(unique(homolog.id)))]
+flavonol.expression[, s.order := NULL]
+
 setkey(flavonol.expression, "homolog.id", "UV")
 
 #########
-# FIXME #
+# SKIP #
 #########
 
 # some homologs not found in deseq results???
@@ -223,25 +251,92 @@ ggplot(f.exp.plot,
   scale_colour_brewer(palette = "Set1")
 ggsave("/home/tom/Dropbox/temp/homologs.pdf", width = 10, height = 7.5)
 
-# try a categorical x-axis
-flavonol.expression[At.id == "AT1G06000"]
-ggplot(flavonol.expression[!is.na(log2FoldChange) & Pathway == "Synthesis"],
-       aes(y = homolog.id, x = log2FoldChange, colour = homolog.species)) +
-  theme_minimal(base_size = 4) +
+#########
+# UNSKIP #
+#########
+
+# with a categorical x-axis
+pd <- flavonol.expression[!is.na(log2FoldChange) &
+                            Pathway == "Synthesis"]
+
+# split into two columns
+keep <- c("PAL1/PAL2", "C4H", "4CL3", "ACC1", "CHS", "CHI")
+pd[At.designation %in% keep, col := 1]
+pd[is.na(col), col := 2]
+
+# fix strip labels
+QuoteString <- function(x) {paste0("italic('", x, "')")}
+pd[, At.designation := plyr::mapvalues(
+  At.designation, from = levels(At.designation),
+  to = QuoteString(levels(At.designation))
+)]
+pd[, At.designation := plyr::mapvalues(
+  At.designation,
+  from = "italic('F3′H (CYP75B1)')",
+  to = "italic('F3'*minute*'H')")]
+
+PlotColumn <- function(colnum) {
+  ggplot(pd[col == colnum], aes(y = homolog.id, x = log2FoldChange, colour = homolog.species)) +
+  theme_minimal(base_size = 10) +
   theme(
-    strip.text.y = element_text(size = 5, angle = 0, face = "italic"),
+    strip.text.y = element_text(angle = 0, face = "italic", hjust = 0),
     axis.text.y = element_text(face = "italic"),
     axis.ticks.length	= grid::unit(0, "mm"),
-    axis.text.x = element_text(size = 8),
-    axis.title.x = element_text(size = 10),
-    legend.text = element_text(face = "italic", size = 8)
+    axis.text.x = element_text(),
+    axis.title.x = element_text(),
+    legend.text = element_text(face = "italic", )
     ) +
   scale_colour_brewer(palette = "Set1", guide = guide_legend(title=NULL)) +
-  facet_grid(At.designation ~ UV, scales = "free_y", space = "free_y", drop = TRUE) +
-  ylab(NULL) +
+  facet_grid(At.designation ~ UV, scales = "free_y", space = "free_y",
+             drop = TRUE, labeller = label_parsed) +
+  ylab(NULL) + xlab(expression(Log[2]*"-"*fold~change)) +
+  xlim(-2.2, 2.2) +
+  geom_vline(xintercept = 0, size = 0.2) +
+  geom_vline(xintercept = c(-log(1.5, 2), log(1.5, 2)),
+             size = 0.2, linetype = 2) +
   geom_errorbarh(aes(xmax = log2FoldChange + lfcSE,
                      xmin = log2FoldChange - lfcSE),
-                 height = 0.5, size = 0.1, colour = "black") +
-  geom_point(size = 0.5)
-  
-ggsave("/home/tom/Dropbox/temp/homologs.pdf", width = 8.27/2, height = 11.69)
+                 height = 0.2, size = 0.2, colour = "black") +
+  geom_point(size = 1)
+}
+
+# plot left column with no legend or axis title
+c1 <- PlotColumn(1)
+c1grob <- ggplotGrob(c1)
+legend <- gtable_filter(c1grob, "guide-box")
+legend.loc <- c1grob$layout[c1grob$layout$name == "guide-box",c("l","r")]
+
+xlab <- gtable_filter(c1grob, "xlab")
+xlab.loc <- c1grob$layout[c1grob$layout$name == "xlab",c("t","b")]
+
+c1.nolegend <- c1grob[-c(min(xlab.loc), max(xlab.loc)), -c(min(legend.loc), max(legend.loc))]
+
+# plot right column and extract legend (ggtable)
+c2 <- PlotColumn(2)
+c2grob <- ggplotGrob(c2)
+legend.loc <- c2grob$layout[c2grob$layout$name == "guide-box",c("l","r")]
+xlab.loc <- c2grob$layout[c2grob$layout$name == "xlab",c("t","b")]
+
+c2.nolegend <- c2grob[-c(min(xlab.loc), max(xlab.loc)), -c(min(legend.loc), max(legend.loc))]
+
+# grid back together (left, right, legend)
+plot.with.legend <- gridExtra::arrangeGrob(
+  grobs = list(c1.nolegend, c2.nolegend, legend),
+  widths = list(0.45, 0.45, 0.1), ncol = 3)
+
+# add x-axis label
+# add two lines, one for whitespace and one for the images
+combined.figure.grob <- gtable_add_rows(
+  plot.with.legend,
+  grid::unit.c( # bit of whitespace?
+               unit(12, "pt"), # 12pt for axis label 
+               unit(3, "pt"))) # padding
+fig.with.xaxis <- gtable_add_grob(
+  combined.figure.grob, xlab, t=2, b=2,l=1,r=2)
+
+# draw
+# ggsave("/home/tom/Dropbox/temp/homologs.pdf", width = 3.937 * 2, height = 9.843)
+pdf("/home/tom/Dropbox/temp/homologs.pdf", width = 3.937 * 2, height = 9.843)
+grid::grid.newpage()
+grid::grid.draw(fig.with.xaxis)
+dev.off()
