@@ -134,7 +134,8 @@ phytomine.results.file <- system(paste("uvb/phytomine.py --input", tmp),
                                  intern = TRUE)
 phytomine.results <- data.table(
   read.table(phytomine.results.file, sep = "\t", header = TRUE,
-             stringsAsFactors = FALSE, na.strings = "None"), key = "name")
+             stringsAsFactors = FALSE, na.strings = "None",
+             colClasses = "character", strip.white = TRUE), key = "name")
 cluster.results <- phytomine.results[cluster.table, .(
   gene = name, cluster, organism.shortName, briefDescription
 )]
