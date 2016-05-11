@@ -116,4 +116,3 @@ writeLines(sInf, logLocation)
 
 GenerateMessage("Done")
 quit(save = "no", status = 0)
-
