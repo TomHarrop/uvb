@@ -1,4 +1,4 @@
-#!/usr/bin/Rscript
+#!/usr/bin/env Rscript
 
 library(data.table)
 library(Mfuzz)
@@ -135,7 +135,8 @@ phytomine.results.file <- system(paste("uvb/phytomine.py --input", tmp),
 phytomine.results <- data.table(
   read.table(phytomine.results.file, sep = "\t", header = TRUE,
              stringsAsFactors = FALSE, na.strings = "None",
-             colClasses = "character", strip.white = TRUE), key = "name")
+             colClasses = "character", strip.white = TRUE, quote = ""),
+  key = "name")
 cluster.results <- phytomine.results[cluster.table, .(
   gene = name, cluster, organism.shortName, briefDescription
 )]
@@ -166,22 +167,3 @@ writeLines(sInf, logLocation)
 
 GenerateMessage("Done")
 quit(save = "no", status = 0)
-
-# 
-# # plot lfc with clusters
-# 
-# pal <- RColorBrewer::brewer.pal(12, "Set3")[-9]
-# pd <- cluster.results[lfc.table,
-#                       .(gene, cluster, hw, bs)]
-# ggplot(mapping = aes(x = bs, y = hw)) +
-#   theme_minimal() +
-#   #scale_colour_manual(values = pal) +
-#   geom_point(data = pd[!gene %in% var.genes.table$gene],
-#              colour = "grey90", alpha = 0.2, size = 1) +
-#   geom_point(data = var.genes.table[!gene %in% names(assigned.clusters)],
-#              colour = "black", alpha = 0.5, size = 1) +
-#   geom_point(data = pd[!is.na(cluster)],
-#              mapping = aes(colour = as.factor(cluster)), alpha = 0.8)
-
-
-
