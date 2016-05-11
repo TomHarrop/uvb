@@ -238,121 +238,27 @@ combined.figure.grob <- gtable_add_rows(
 fig.with.xaxis <- gtable_add_grob(
   combined.figure.grob, xlab, t=2, b=2,l=1,r=2)
 
-# draw
-pdf("/home/tom/Dropbox/temp/homologs.pdf", width = 3.937 * 2, height = 9.843)
+# save plot
+message(GenerateMessageText("Saving output"))
+out.dir <- "output/merged/deseq2"
+if (!dir.exists(out.dir)) {
+  dir.create(out.dir, recursive = TRUE)
+}
+out.file <- paste0(out.dir, "/flavonoid_synthesis.pdf")
+
+pdf(out.file, width = 3.937 * 2, height = 9.843)
 grid::grid.newpage()
 grid::grid.draw(fig.with.xaxis)
 dev.off()
 
+# save logs
+sInf <- c(paste("git branch:",system("git rev-parse --abbrev-ref HEAD",
+                                     intern = TRUE)),
+          paste("git hash:", system("git rev-parse HEAD", intern = TRUE)),
+          capture.output(sessionInfo()))
+logLocation <- paste0(out.dir, "/SessionInfo.flavonoid_synthesis.txt")
+writeLines(sInf, logLocation)
 
-
-
-
-
-
-
-
-
-#########
-# SKIP #
-#########
-
-# some homologs not found in deseq results???
-bof <- flavonol.expression[is.na(log2FoldChange), unique(homolog.id)]
-bof %in% deseq.results[, rn]
-deseq.results[rn %in% bof]
-
-flavonol.expression[homolog.id == "Cre07.g322884"]
-# -> no, they just weren't detected (0 reads)
-
-flavonol.expression[homolog.species == "Os" & UV == "hw", ][23,]
-flavonol.expression[homolog.id == "AT2G37040"]
-flavonol.expression[homolog.id == "LOC_Os04g43800"]
-flavonol.expression[padj < 0.1]
-
-# go wide to plot hs vs bw
-plot.data <- reshape2::dcast(
-  unique(flavonol.expression), homolog.id + homolog.species + At.id +
-    At.function + homolog.relationship ~ UV, value.var = "log2FoldChange")
-
-# visualise
-ggplot(plot.data, aes(x = bs, y = hw, label = homolog.id)) +
-  facet_wrap(~homolog.species) +
-  geom_point() +
-  geom_text()
-
-
-ggplot(plot.data, aes(x = bs, y = hw, label = homolog.id, colour = homolog.species)) +
-  facet_wrap(~At.id) +
-  scale_color_brewer(palette = "Set1") +
-  geom_point()
-
-
-
-pd2 <- plot.data[plot.data$homolog.relationship %in% c("one-to-one", "identical"), ]
-pd2[is.na(pd2)] <- 0
-ggplot(pd2, aes(x = bs, y = hw, label = homolog.id, colour = homolog.species)) +
-  facet_wrap(~At.id) +
-  scale_color_brewer(palette = "Set1") +
-  geom_point()
-
-
-# error bars
-
-# pick two genes
-bof.wide <- deseq.results[rn %in% c("LOC_Os04g43800", "AT3G51240")]
-bof.long <- reshape2::melt(bof.wide, id.vars = c("rn", "UV"),
-                           measure.vars = c("log2FoldChange", "lfcSE"))
-bof.long[, variable := paste(UV, variable, sep = ".")]
-bof <- reshape2::dcast(bof.long, rn ~ variable)
-
-# plot
-ggplot(bof, aes(x = bs.log2FoldChange, y =  hw.log2FoldChange)) +
-  geom_point() +
-  geom_errorbarh(aes(xmax = bs.log2FoldChange + bs.lfcSE,
-                     xmin = bs.log2FoldChange - bs.lfcSE),
-                 height = 0) +
-  geom_errorbar(aes(ymax = hw.log2FoldChange + hw.lfcSE,
-                    ymin = hw.log2FoldChange - hw.lfcSE),
-                width = 0)
-
-# add errorbars (DESeq2 lfcSE) to plot
-# flavonol.expression <- deseq.results[flavonol.homologs, .(
-#   At.id, At.function, Saito.ref, homolog.species, homolog.id,
-#   homolog.relationship, UV, log2FoldChange, lfcSE
-# )]
-# setkey(flavonol.expression, "homolog.id", "UV")
-
-# melt the l2fc and se columns
-f.exp.long <- reshape2::melt(
-  flavonol.expression,
-  id.vars = c("At.id", "homolog.species", "homolog.id", "UV"),
-  measure.vars = c("log2FoldChange", "lfcSE"))
-
-# make new labels for variable
-f.exp.long[, measure := paste(UV, variable, sep = ".")]
-
-# cast by variable
-f.exp.plot <- data.table(reshape2::dcast(
-  f.exp.long,
-  homolog.id + At.id + homolog.species ~ measure,
-  value.var = "value"))
-
-# plot as before
-ggplot(f.exp.plot,
-       aes(x = bs.log2FoldChange, y =  hw.log2FoldChange,
-           colour = homolog.species)) +
-  facet_wrap(~At.id, ncol = 7) +
-  theme_grey(base_size = 8) +
-  coord_fixed() +
-  geom_errorbarh(aes(xmax = bs.log2FoldChange + bs.lfcSE,
-                     xmin = bs.log2FoldChange - bs.lfcSE),
-                 height = 0, size = 0.5, colour = "grey50") +
-  geom_errorbar(aes(ymax = hw.log2FoldChange + hw.lfcSE,
-                    ymin = hw.log2FoldChange - hw.lfcSE),
-                width = 0, size = 0.5, colour = "grey50") +
-  geom_point(alpha = 0.8, size = 1) +
-  scale_colour_brewer(palette = "Set1")
-ggsave("/home/tom/Dropbox/temp/homologs.pdf", width = 10, height = 7.5)
-
+message(GenerateMessageText("Done"))
+quit(save = "no", status = 0)
 
