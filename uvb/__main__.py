@@ -130,6 +130,16 @@ def mfuzz_R(input_files, output_files, species):
     functions.print_job_submission(job_name, job_id)
 
 
+# plot clustering results
+def combine_mfuzz_results_R(input_files, output_files):
+    job_script = 'src/R/combine_mfuzz_results.R'
+    ntasks = '1'
+    cpus_per_task = '1'
+    job_name = 'mfuzz_plot'
+    job_id = functions.submit_job(job_script, ntasks, cpus_per_task, job_name)
+    functions.print_job_submission(job_name, job_id)
+
+
 #########################
 # PIPELINE CONSTRUCTION #
 #########################
@@ -234,6 +244,12 @@ def main():
         filter=ruffus.formatter(),
         output='output/{subdir[0][1]}/mfuzz/SessionInfo.mfuzz.txt',
         extras=['{subdir[0][1]}'])
+
+    # combine mfuzz_results
+    mfuzz_plot = main_pipeline.merge(
+        task_func=combine_mfuzz_results_R,
+        input=mfuzz_results,
+        output='output/merged/mfuzz/SessionInfo.mfuzz.txt')
 
     # compare flavonoid synthesis genes
     flavonoid_genes = main_pipeline.transform(

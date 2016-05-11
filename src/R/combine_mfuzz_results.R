@@ -4,8 +4,8 @@ library(data.table)
 library(ggplot2)
 
 # messages
-GenerateMessageText <- function(message.text){
-  paste0("[ ", date(), " ]: ", message.text)
+GenerateMessage <- function(message.text){
+  message(paste0("[ ", date(), " ]: ", message.text))
 }
 
 # parse the directory names
@@ -17,6 +17,7 @@ SplitPath <- function(x) {
   }
 }
 # load files
+GenerateMessage("Loading files")
 LoadMfuzzResults <- function(pattern) {
   results.files <- list.files(path = "output", pattern = pattern,
                               full.names = TRUE, recursive = TRUE)  
@@ -38,7 +39,7 @@ TidyPlotData <- function(results.table){
     Species,
     from = c("at", "sl" ,"os", "sp", "sm", "pp", "cr"),
     to = c("A. thaliana", "S. lycopersicum", "O. sativa",
-           "S. polyrhiza", "S. moellendorffi",
+           "S. polyrhiza", "S. moellendorffii",
            "P. patens", "C. rheinhardtii"))]
   my.dt
 }
@@ -57,6 +58,7 @@ unclustered <- var.genes[!gene %in% clusters$gene]
 clustered <- lfc[clusters, .(Species, gene, bs, hw, cluster)]
 
 # check we got everything
+GenerateMessage("Making sure we didn't lose any genes")
 check <- dim(excluded)[1] + dim(unclustered)[1] +
   dim(clustered)[1] == dim(lfc.table)[1]
 if (!check) {
@@ -65,6 +67,7 @@ if (!check) {
 }
 
 # draw a mondo plot
+GenerateMessage("Producing plot")
 pal <- RColorBrewer::brewer.pal(12, "Set3")[-9]
 g <- ggplot(mapping = aes(x = bs, y = hw)) +
   theme_minimal(base_size = 10) +
@@ -85,7 +88,7 @@ g <- ggplot(mapping = aes(x = bs, y = hw)) +
                       guide = guide_legend(title = "Cluster"))
 
 # save output
-message(GenerateMessageText("Saving output"))
+GenerateMessage("Saving output")
 out.dir <- "output/merged/mfuzz"
 if (!dir.exists(out.dir)) {
   dir.create(out.dir, recursive = TRUE)
@@ -95,4 +98,22 @@ plot.file <- paste0(out.dir, "/cluster_plot.pdf")
 pdf(plot.file, width = 3.937 * 2, height = 3.937 * 2)
 g
 dev.off()
+
+# tsv for SI
+setkey(clusters, "Species", "cluster", "gene")
+write.table(clusters[, .(Species, gene, cluster, briefDescription)],
+            file = paste0(out.dir, "/clusters.tab"), sep = "\t",
+            quote = FALSE, na = "", row.names = FALSE)
+
+
+# save logs
+sInf <- c(paste("git branch:",system("git rev-parse --abbrev-ref HEAD",
+                                     intern = TRUE)),
+          paste("git hash:", system("git rev-parse HEAD", intern = TRUE)),
+          capture.output(sessionInfo()))
+logLocation <- paste0(out.dir, "/SessionInfo.mfuzz.txt")
+writeLines(sInf, logLocation)
+
+GenerateMessage("Done")
+quit(save = "no", status = 0)
 
