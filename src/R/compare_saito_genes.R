@@ -1,3 +1,5 @@
+#!/usr/bin/env Rscript
+
 library(data.table)
 library(ggplot2)
 library(gtable)
@@ -17,8 +19,10 @@ if (!file.exists(deseq.results.file)) {
 }
 deseq.results<- readRDS(deseq.results.file)
 
-# load Saito et al. data (doi:10.1016/j.plaphy.2013.02.001, 
-# http://dx.doi.org/10.1016/j.plaphy.2013.02.001)
+# Load data: This is table 1 from Sato et al., 2013 
+# (doi:10.1016/j.plaphy.2013.02.001). There is no direct download link for the 
+# table, so it must be manually downloaded from 
+# http://dx.doi.org/10.1016/j.plaphy.2013.02.001 as csv and placed in data/
 GenerateMessage("Parsing data from saitoT1.csv")
 raw.data.file <- "data/saitoT1.csv"
 if (!file.exists(raw.data.file)) {
@@ -101,8 +105,8 @@ flavonol.homologs <- phytomine.results[saito.t1, .(
   At.designation = Gene.designation,
   Pathway = pathway,
   Saito.ref = `Ref.`,
-  homolog.species = gsub("^([[:upper:]]).*[[:blank:]]([[:lower:]]).*", "\\1\\2",
-                         homolog.gene2.organism.shortName),
+  homolog.species = gsub("^([[:upper:]]).*[[:blank:]]([[:lower:]]).*",
+                         "\\1\\2", homolog.gene2.organism.shortName),
   homolog.id = homolog.gene2.primaryIdentifier,
   homolog.relationship
 )]
@@ -170,8 +174,7 @@ pd[, At.designation := plyr::mapvalues(
 pd[, At.designation := plyr::mapvalues(
   At.designation,
   from = unique(At.designation),
-  to =  gsub("/", "')*/*italic('", unique(At.designation)))]
-
+  to =  gsub("/", "')*'/'*italic('", unique(At.designation)))]
 
 # fix UV labels
 pd[, UV := toupper(UV)]
@@ -226,20 +229,21 @@ c2.nolegend <- c2grob[-c(min(xlab.loc), max(xlab.loc)),
 # grid back together (left, right, legend)
 plot.with.legend <- gridExtra::arrangeGrob(
   grobs = list(c1.nolegend, c2.nolegend, legend),
-  widths = list(0.45, 0.45, 0.1), ncol = 3)
+  widths = list(0.46, 0.46, 0.08), ncol = 3)
 
-# add x-axis label
-# add two lines, one for whitespace and one for the images
+# add two lines, one for whitespace and one for the axis text
 combined.figure.grob <- gtable_add_rows(
   plot.with.legend,
   grid::unit.c( # bit of whitespace?
     unit(12, "pt"), # 12pt for axis label 
     unit(6, "pt"))) # bottom margin
+
+# add x-axis label
 fig.with.xaxis <- gtable_add_grob(
-  combined.figure.grob, xlab, t=2, b=2,l=1,r=2)
+  combined.figure.grob, xlab, t = 2, b = 2,l = 1,r = 2)
 
 # save plot
-message(GenerateMessageText("Saving output"))
+GenerateMessage("Saving output")
 out.dir <- "output/merged/deseq2"
 if (!dir.exists(out.dir)) {
   dir.create(out.dir, recursive = TRUE)
@@ -259,6 +263,5 @@ sInf <- c(paste("git branch:",system("git rev-parse --abbrev-ref HEAD",
 logLocation <- paste0(out.dir, "/SessionInfo.flavonoid_synthesis.txt")
 writeLines(sInf, logLocation)
 
-message(GenerateMessageText("Done"))
+GenerateMessage("Done")
 quit(save = "no", status = 0)
-

@@ -109,6 +109,27 @@ def list_de_genes_R(input_files, output_files):
     functions.print_job_submission(job_name, job_id)
 
 
+# combine the DESeq2 results into a single csv
+def compare_saito_genes_R(input_files, output_files):
+    job_script = 'src/R/compare_saito_genes.R'
+    ntasks = '1'
+    cpus_per_task = '1'
+    job_name = 'saito_genes'
+    job_id = functions.submit_job(job_script, ntasks, cpus_per_task, job_name)
+    functions.print_job_submission(job_name, job_id)
+
+
+# clustering for each species
+def mfuzz_R(input_files, output_files, species):
+    job_script = 'src/R/mfuzz.R'
+    ntasks = '1'
+    cpus_per_task = '1'
+    job_name = species + '_mfuzz'
+    job_id = functions.submit_job(job_script, ntasks, cpus_per_task, job_name,
+                                  extras=['-s', species])
+    functions.print_job_submission(job_name, job_id)
+
+
 #########################
 # PIPELINE CONSTRUCTION #
 #########################
@@ -205,6 +226,21 @@ def main():
         task_func=list_de_genes_R,
         input=deseq_results,
         output="output/merged/deseq2/SessionInfo.de_genes.txt")
+
+    # run clustering
+    mfuzz_results = main_pipeline.transform(
+        task_func=mfuzz_R,
+        input=deseq_results,
+        filter=ruffus.formatter(),
+        output='output/{subdir[0][1]}/mfuzz/SessionInfo.mfuzz.txt',
+        extras=['{subdir[0][1]}'])
+
+    # compare flavonoid synthesis genes
+    flavonoid_genes = main_pipeline.transform(
+        task_func=compare_saito_genes_R,
+        input=de_lists,
+        filter=ruffus.formatter(),
+        output='{path[0]}/SessionInfo.flavonoid_synthesis.txt')
 
     # run the pipeline
     ruffus.cmdline.run(options, multithread=8)
