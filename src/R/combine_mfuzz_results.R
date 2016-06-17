@@ -16,6 +16,7 @@ SplitPath <- function(x) {
     c(basename(x), SplitPath(dirname(x)))
   }
 }
+
 # load files
 GenerateMessage("Loading files")
 LoadMfuzzResults <- function(pattern) {
@@ -40,7 +41,7 @@ TidyPlotData <- function(results.table){
     from = c("at", "sl" ,"os", "sp", "sm", "pp", "cr"),
     to = c("A. thaliana", "S. lycopersicum", "O. sativa",
            "S. polyrhiza", "S. moellendorffii",
-           "P. patens", "C. rheinhardtii"))]
+           "P. patens", "C. reinhardtii"))]
   my.dt
 }
 
@@ -69,14 +70,19 @@ if (!check) {
 # draw a mondo plot
 GenerateMessage("Producing plot")
 pal <- RColorBrewer::brewer.pal(12, "Set3")[-9]
+#pal <- clustered[, wesanderson::wes_palette(
+#  "Zissou", n = max(cluster), type = "continuous")]
+
 g <- ggplot(mapping = aes(x = bs, y = hw)) +
   theme_minimal(base_size = 10) +
   theme(legend.position = c(5/6, 2/6),
-        strip.text = element_text(face = "italic")) + 
+        legend.key.height = unit(3/4, "lines"),
+        strip.text = element_text(face = "italic"),
+        axis.ticks.length = unit(0, "mm")) + 
   coord_fixed() +
   facet_wrap(~Species, dir = "v") +
-  xlab(expression(Log[2]*'-fold change (BS)')) +
-  ylab(expression(Log[2]*'-fold change (HW)')) +
+  xlab(expression("BS ("*L[2]*"FC)")) +
+  ylab(expression("HW ("*L[2]*"FC)")) +
   geom_point(data = excluded,
              colour = "#D9D9D9", alpha = 0.2, size = 0.5) +
   geom_point(data = unclustered,
@@ -95,7 +101,7 @@ if (!dir.exists(out.dir)) {
 }
 
 plot.file <- paste0(out.dir, "/cluster_plot.pdf")
-pdf(plot.file, width = 3.937 * 2, height = 3.937 * 2)
+pdf(plot.file, width = 7.874, height = 7.874)
 g
 dev.off()
 

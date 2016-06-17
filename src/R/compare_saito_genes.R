@@ -179,6 +179,10 @@ pd[, At.designation := plyr::mapvalues(
 # fix UV labels
 pd[, UV := toupper(UV)]
 
+# colour the points
+plot.cols <- pd[, wesanderson::wes_palette(
+    "Darjeeling", length(unique(homolog.species)), "continuous")]
+
 # function for plotting each column
 PlotColumn <- function(colnum) {
   ggplot(pd[col == colnum],
@@ -191,7 +195,9 @@ PlotColumn <- function(colnum) {
       axis.text.x = element_text(),
       axis.title.x = element_text(),
       legend.text = element_text(face = "italic")) +
-    scale_colour_brewer(palette = "Set1", guide = guide_legend(title=NULL)) +
+    # scale_colour_brewer(palette = "Set1", guide = guide_legend(title=NULL)) +
+    scale_colour_manual(values = plot.cols,
+                        guide = guide_legend(title = NULL)) +
     facet_grid(At.designation ~ UV, scales = "free_y", space = "free_y",
                drop = TRUE, labeller = label_parsed) +
     ylab(NULL) + xlab(expression(Log[2]*"-"*fold~change)) +
@@ -202,7 +208,7 @@ PlotColumn <- function(colnum) {
     geom_errorbarh(aes(xmax = log2FoldChange + lfcSE,
                        xmin = log2FoldChange - lfcSE),
                    height = 0.3, size = 0.1, colour = "black") +
-    geom_point(size = 0.5)
+    geom_point(size = 1)
 }
 
 # plot left column with no legend or axis title

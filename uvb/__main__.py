@@ -219,7 +219,7 @@ def main():
         task_func=plot_reads_in_genes_R,
         input=mapping_stats,
         filter=ruffus.formatter(),
-        output="{subpath[0][0]}/readsInGenes.pdf")
+        output="{subpath[0][0]}/Figure S1.pdf")
 
     # use generator in the input field to collate the previous results
     deseq_results = main_pipeline.transform(
