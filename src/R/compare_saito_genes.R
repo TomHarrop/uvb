@@ -94,7 +94,7 @@ phytomine.results.file <- system(
 GenerateMessage("Reading Phytomine results")
 phytomine.results <- data.table(
   read.table(phytomine.results.file, sep = "\t", header = TRUE,
-             stringsAsFactors = FALSE, na.strings = "None"),
+             stringsAsFactors = FALSE, na.strings = "None", quote = ""),
   key = "primaryIdentifier")
 
 # merge phytozome results to saito table

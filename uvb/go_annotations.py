@@ -26,14 +26,15 @@ with open(gene_name_list, 'r') as f:
     gene_names = [line.strip() for line in f]
 
 # run the Phytomine query
-views = ['primaryIdentifier', 'organism.shortName',
-         'goAnnotation.ontologyTerm.identifier',
-         'goAnnotation.ontologyTerm.name',
-         'goAnnotation.ontologyTerm.namespace']
 service = Service('https://phytozome.jgi.doe.gov/phytomine/service')
 query = service.new_query('Gene')
-query.add_views(views)
-query.add_constraint('Gene.name', 'ONE OF', gene_names, code='A')
+views = ["length", "organism.taxonId", "primaryIdentifier",
+         "organism.shortName",
+         "ontologyAnnotations.ontologyTerm.identifier",
+         "ontologyAnnotations.ontologyTerm.name",
+         "ontologyAnnotations.ontologyTerm.namespace"]
+query.add_view(views)
+query.add_constraint('primaryIdentifier', 'ONE OF', gene_names, code='A')
 query.add_constraint('organism.taxonId', 'ONE OF',
                      list(taxon_ids.values()), code='B')
 query.set_logic("A and B")
