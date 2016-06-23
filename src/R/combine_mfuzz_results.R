@@ -70,8 +70,6 @@ if (!check) {
 # draw a mondo plot
 GenerateMessage("Producing plot")
 pal <- RColorBrewer::brewer.pal(12, "Set3")[-9]
-#pal <- clustered[, wesanderson::wes_palette(
-#  "Zissou", n = max(cluster), type = "continuous")]
 
 g <- ggplot(mapping = aes(x = bs, y = hw)) +
   theme_minimal(base_size = 10) +
